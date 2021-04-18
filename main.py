@@ -7,13 +7,13 @@ MEM_INCREASE = 2
 
 implecit = True
 
-first_fit = True
+first_fit = False
 
-verbose =False
+verbose = False
 
 class Heap( ):
     def __init__(self):
-        self.size = 20
+        self.size = 1000
         self.sizemax = 100000
         
         self.memory_block = [ 0xDEADBEEF for x in range(self.size ) ]  
@@ -42,13 +42,13 @@ class Heap( ):
         #header + required size + any possible padding + footer
         new_size =  ( math.ceil(size/8) * 8 ) + 8
 
-        while( (found == False) or (self.memory_block[free_index] == 0x1) ):
+        while( (found == False) and (self.memory_block[free_index] != 0x1) ):
 
             #IF the block is free then:
             if self.memory_block[free_index] & 1 ==  0:
             
                 #Do we have enough memory to store the information
-                if self.memory_block[free_index] & ~ 1 >= new_size:   
+                if self.memory_block[free_index] & ~ 1 > new_size:   
                     tmp = self.memory_block[free_index] - new_size
 
                     new_block = new_size // 4
@@ -79,25 +79,11 @@ class Heap( ):
                     self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
 
                     return free_index + 1
-                 
-                # elif self.memory_block[free_index + (self.memory_block[free_index] ) // 4 ] == 0X1:
-                #     if first_fit == True:
-                #         last_end_index = self.size - 1
-                        
-                #         self.mysbrk(new_size)
+                elif self.memory_block[free_index] & ~ 1 == new_size:
 
-                #         self.memory_block[last_end_index] = new_size 
-                #         self.memory_block[self.size - 2] = new_size
-                        
-                #         self.memory_block[self.size - 1] = 0x1
-
-                #         free_index = last_end_index
-
-                #         continue
-                    
-                #     #Case for best fit
-                #     else:
-                #         pass
+                    self.memory_block[free_index] = new_size | 1 #  Header allocated memomry
+                    self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
+                    return free_index + 1
                 
                 
                 #If not then go the next block
@@ -130,7 +116,10 @@ class Heap( ):
         if first_fit == True:
             last_end_index = self.size - 1
             
-            self.mysbrk(new_size//4)
+            ret_val = self.mysbrk(new_size//4)
+
+            if ret_val == ERROR:
+                return ERROR
 
             self.memory_block[last_end_index] = new_size | 1
             self.memory_block[self.size - 2] = new_size | 1
@@ -183,6 +172,10 @@ class Heap( ):
         return
     
     def myrealloc(self, pointer, size):
+        if size == 0:
+            self.myfree(pointer)
+            return 0
+
         new_ptr = self.mymalloc(size)
         old_block_size = (self.memory_block[pointer - 1] //4)
         
@@ -194,10 +187,6 @@ class Heap( ):
             
             self.myfree(pointer)
             return new_ptr
-        
-        elif size == 0:
-            self.myfree(pointer)
-            return 0
         
         else:
             return pointer
@@ -222,6 +211,8 @@ def main():
             
             if command[0] == 'a':
                 location = memory.mymalloc( int(command[1]) )
+                if location == ERROR:
+                    return
                 pointer[ int(command[2]) ] = location
 
                 #print(pointer)
@@ -243,6 +234,9 @@ def main():
             elif command[0] == 'r':
                 location = memory.myrealloc( pointer[int(command[2])] , int( command[1] ) ) #old_pointer,size
 
+                if location == ERROR:
+                    return
+
                 pointer[ int(command[3]) ] = location
                 
                 if verbose == True:
@@ -250,6 +244,7 @@ def main():
                     memory.print_heap()
                     print("\n--------------------------------------------------------------------------------------\n")
     
-    #memory.print_heap()
+    if verbose == False:
+        memory.print_heap()
             
 main()
