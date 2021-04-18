@@ -9,7 +9,7 @@ implecit = True
 
 first_fit = False
 
-verbose = True
+verbose = False
 
 class Heap( ):
     def __init__(self):
@@ -91,9 +91,8 @@ class Heap( ):
     
     def mem_extender(self, new_size):
         last_end_index = self.size - 1
-        ret_val = self.mysbrk(new_size//4)
 
-        if ret_val == ERROR:
+        if self.mysbrk(new_size//4) == ERROR:
             return ERROR
 
         self.memory_block[last_end_index] = new_size | 1
@@ -102,7 +101,8 @@ class Heap( ):
         self.memory_block[self.size - 1] = 0x1
 
         free_index = last_end_index
-        return free_index
+        
+        return free_index + 1
     
 
 
@@ -194,9 +194,7 @@ class Heap( ):
             #If we hit the end of array but no value appropriate value is found
             #Call sbrk
             else:
-                return self.mem_extender(self.size)
-
-
+                return self.mem_extender(new_size)
 
 
     def print_heap(self):
@@ -260,7 +258,6 @@ class Heap( ):
             #old_block_size > requested_block:
             return pointer
             
-
 
 
 def main():

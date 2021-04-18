@@ -1,6 +1,6 @@
-all: test1 test2 test3 test4 test5 test6 test7 test10 test12 test13
+all: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13
 
-#test8 test9 test11
+# 
 
 compile1:
 	python3 main.py examples/examples/1/in.txt > 1.out
