@@ -1,0 +1,1 @@
+./A3-ref -v --free-list=implicit --fit=best --initial-heap-size=20 in.txt

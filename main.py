@@ -7,9 +7,9 @@ MEM_INCREASE = 2
 
 implecit = True
 
-first_fit = True
+first_fit = False
 
-verbose = False
+verbose = True
 
 class Heap( ):
     def __init__(self):
@@ -56,6 +56,13 @@ class Heap( ):
             return 0
             #------------------------------------------------------------
         else:
+            # if first_fit == True:
+            #     return 8
+            # else:
+            #     if (mem_remaining < 8):
+            #         return 0
+            #     else:
+            #         return 8
             return 8
 
 
@@ -82,6 +89,21 @@ class Heap( ):
 
         return free_index + 1
     
+    def mem_extender(self, new_size):
+        last_end_index = self.size - 1
+        ret_val = self.mysbrk(new_size//4)
+
+        if ret_val == ERROR:
+            return ERROR
+
+        self.memory_block[last_end_index] = new_size | 1
+        self.memory_block[self.size - 2] = new_size | 1
+
+        self.memory_block[self.size - 1] = 0x1
+
+        free_index = last_end_index
+        return free_index
+    
 
 
     def mymalloc(self, size):
@@ -103,14 +125,20 @@ class Heap( ):
                     if first_fit == True:
                         return self.imp_ff(new_size,free_index)
                     else:
+                        # if self.memory_block[free_index] & ~ 1 < (new_size +16):
+                        #     bf_index = free_index
+                        #     break
+
                         if bf_index == -1:
                             bf_index = free_index
 
                         elif self.memory_block[free_index] & ~ 1 < self.memory_block[bf_index]:
                             bf_index = free_index
                         
-                        else:
-                            continue
+                        # else:
+                        #     continue
+
+                        free_index += (self.memory_block[free_index] ) // 4
 
                 elif self.memory_block[free_index] & ~ 1 == new_size:
                     #if first_fit == True:
@@ -147,31 +175,26 @@ class Heap( ):
         # If we have hit the end of the array and do not have enough space
         # to meet the requested space requirements
         if first_fit == True:
-            last_end_index = self.size - 1
-            
-            ret_val = self.mysbrk(new_size//4)
-
-            if ret_val == ERROR:
-                return ERROR
-
-            self.memory_block[last_end_index] = new_size | 1
-            self.memory_block[self.size - 2] = new_size | 1
-
-            self.memory_block[self.size - 1] = 0x1
-
-            free_index = last_end_index
-            return free_index
+            return self.mem_extender(new_size)
         
         #Case for best_fit
         else:
+            #If an appropriate index is found before the end of array
             if bf_index != -1:
                 curr_header = bf_index
+                new_size += self.practitioner(curr_header, new_size)
+
                 curr_footer = bf_index + ((new_size//4)) - 1
 
                 self.memory_block[curr_header] = new_size | 1
                 self.memory_block[curr_footer] = new_size | 1
 
-                return curr_header
+                return curr_header + 1
+            
+            #If we hit the end of array but no value appropriate value is found
+            #Call sbrk
+            else:
+                return self.mem_extender(self.size)
 
 
 
@@ -263,7 +286,7 @@ def main():
 
                 #print(pointer)
                 if verbose == True:
-                    print("\n-----------------------------------After Allocation-----------------------------------\n")
+                    print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
                     memory.print_heap()
                     print("\n--------------------------------------------------------------------------------------\n")
                
