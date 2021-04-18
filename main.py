@@ -7,7 +7,7 @@ MEM_INCREASE = 2
 
 implecit = True
 
-first_fit = False
+first_fit = True
 
 verbose = False
 
@@ -32,59 +32,93 @@ class Heap( ):
             return PERFECT
         else:
             return ERROR
+    
+    #Paramerters:
+    #   mem_remaining   in      bytes
+    #   word_size        in      words
+    def practitioner(self, curr_index, word_size):
+
+        mem_remaining = self.memory_block[curr_index] - word_size
+
+        #If we have a avilable free space of 16 or greater
+        #Then only partition the memmory
+        if ( mem_remaining >= 16):
+            #Updateing the splited header and footer:
+            #tmp_size = self.memory_block[curr_index] - word_size
+            new_block = word_size // 4
+
+            footer_loc = curr_index + (self.memory_block[curr_index] ) // 4 - 1
+
+            self.memory_block[curr_index + new_block] = mem_remaining
+
+            self.memory_block[footer_loc ] = mem_remaining
+            
+            return 0
+            #------------------------------------------------------------
+        else:
+            return 8
+
+
+    def imp_ff(self, new_size, free_index):
+        # mem_remaining = self.memory_block[free_index] - new_size
+
+        # #If we have a avilable free space of 16 or greater
+        # #Then only partition the memmory
+        # if ( mem_remaining >= 16):
+
+        #     self.practitioner(free_index, new_size, mem_remaining)
+        
+        # else:
+        #     new_size = new_size + 8
+
+        new_size += self.practitioner(free_index, new_size)
+    
+        self.memory_block[free_index] = new_size | 1 #  Header allocated memomry
+
+        #for index in range(self.memory_block[free_index] //4 - 2 ):
+        #    self.memory_block[free_index +index +1] =  0x0
+
+        self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
+
+        return free_index + 1
+    
 
 
     def mymalloc(self, size):
         free_index = 1
         found = False
+        bf_index = -1
         #next_free_index = 1
         
         #header + required size + any possible padding + footer
         new_size =  ( math.ceil(size/8) * 8 ) + 8
 
-        while( (found == False) and (self.memory_block[free_index] != 0x1) ):
+        while(self.memory_block[free_index] != 0x1 ):
 
             #IF the block is free then:
             if self.memory_block[free_index] & 1 ==  0:
             
                 #Do we have enough memory to store the information
-                if self.memory_block[free_index] & ~ 1 > new_size:   
-                    tmp = self.memory_block[free_index] - new_size
-
-                    new_block = new_size // 4
-
-                    #If we have a avilable free space of 16 or greater
-                    #Then only partition the memmory
-                    if ( tmp >= 16):
-
-                        #Updateing the splited header and footer:
-                        tmp_size = self.memory_block[free_index] - new_size
-
-                        footer_loc = free_index + (self.memory_block[free_index] ) // 4 - 1
-
-                        self.memory_block[free_index + new_block] = tmp
-
-                        self.memory_block[footer_loc ] = tmp
-
-                        #------------------------------------------------------------
-                    
+                if self.memory_block[free_index] & ~ 1 > new_size:
+                    if first_fit == True:
+                        return self.imp_ff(new_size,free_index)
                     else:
-                        new_size = new_size + 8
-                
-                    self.memory_block[free_index] = new_size | 1 #  Header allocated memomry
+                        if bf_index == -1:
+                            bf_index = free_index
 
-                    #for index in range(self.memory_block[free_index] //4 - 2 ):
-                    #    self.memory_block[free_index +index +1] =  0x0
+                        elif self.memory_block[free_index] & ~ 1 < self.memory_block[bf_index]:
+                            bf_index = free_index
+                        
+                        else:
+                            continue
 
-                    self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
-
-                    return free_index + 1
                 elif self.memory_block[free_index] & ~ 1 == new_size:
-
+                    #if first_fit == True:
+                    
                     self.memory_block[free_index] = new_size | 1 #  Header allocated memomry
                     self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
                     return free_index + 1
-                
+                    
                 
                 #If not then go the next block
                 else:
@@ -112,7 +146,6 @@ class Heap( ):
         
         # If we have hit the end of the array and do not have enough space
         # to meet the requested space requirements
-        #Check with Zander
         if first_fit == True:
             last_end_index = self.size - 1
             
@@ -129,12 +162,18 @@ class Heap( ):
             free_index = last_end_index
             return free_index
         
-        elif first_fit == False:
-            pass
-        
-        #Case for best fit
+        #Case for best_fit
         else:
-            pass
+            if bf_index != -1:
+                curr_header = bf_index
+                curr_footer = bf_index + ((new_size//4)) - 1
+
+                self.memory_block[curr_header] = new_size | 1
+                self.memory_block[curr_footer] = new_size | 1
+
+                return curr_header
+
+
 
 
     def print_heap(self):
@@ -172,15 +211,21 @@ class Heap( ):
         return
     
     def myrealloc(self, pointer, size):
-        if size == 0:
-            self.myfree(pointer)
-            return 0
-
-        new_ptr = self.mymalloc(size)
         old_block_size = (self.memory_block[pointer - 1] //4)
         
         requested_block = (( math.ceil(size/8) * 8 ) + 8 )//4
 
+        if size == 0:
+            self.myfree(pointer)
+            return 0
+        # elif old_block_size > requested_block:
+        #     return pointer
+
+        new_ptr = self.mymalloc(size)
+
+        if new_ptr == ERROR:
+            return ERROR
+       
         if old_block_size < requested_block:
             for index in range(old_block_size - 2):
                 self.memory_block[new_ptr + index] = self.memory_block[pointer + index]
@@ -189,6 +234,7 @@ class Heap( ):
             return new_ptr
         
         else:
+            #old_block_size > requested_block:
             return pointer
             
 
