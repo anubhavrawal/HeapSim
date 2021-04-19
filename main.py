@@ -5,15 +5,15 @@ PERFECT = 1
 ERROR = -1
 MEM_INCREASE = 2
 
-implecit = True
+implicit = False
 
-first_fit = False
+first_fit = True
 
-verbose = False
+verbose = True
 
 class Heap( ):
     def __init__(self):
-        self.size = 1000
+        self.size = 40
         self.sizemax = 100000
         
         self.memory_block = [ 0xDEADBEEF for x in range(self.size ) ]  
@@ -23,6 +23,16 @@ class Heap( ):
 
         self.memory_block[self.size - 2] = self.memory_block[1]
         self.memory_block[self.size - 1] = 0x1
+
+        if implicit == False:
+            self.memory_block[2] = 0x0
+            self.memory_block[3] = 0x0
+            
+            self.free_root_head = 1
+            self.free_prev_index =  2
+            self.free_next_index =  3
+
+        self.free_index = 1
 
     def mysbrk(self, size):
         if (self.size + size) < self.sizemax:
@@ -49,9 +59,21 @@ class Heap( ):
 
             footer_loc = curr_index + (self.memory_block[curr_index] ) // 4 - 1
 
-            self.memory_block[curr_index + new_block] = mem_remaining
+            new_header = curr_index + new_block
+
+            self.memory_block[new_header] = mem_remaining
 
             self.memory_block[footer_loc ] = mem_remaining
+            
+            #IF Explicit free List
+            if implicit == False:
+                #print(new_header + 1)
+                self.memory_block[new_header + 1 ] = 0x0 
+                self.memory_block[new_header + 2 ] = 0x0
+                
+                self.free_root_head = new_header
+                self.free_prev_index = new_header + 1
+                self.free_next_index = new_header + 2
             
             return 0
             #------------------------------------------------------------
@@ -104,23 +126,16 @@ class Heap( ):
         
         return free_index + 1
     
-
-
-    def mymalloc(self, size):
+    def implicit_list(self, new_size):
         free_index = 1
         found = False
         bf_index = -1
-        #next_free_index = 1
-        
-        #header + required size + any possible padding + footer
-        new_size =  ( math.ceil(size/8) * 8 ) + 8
 
         while(self.memory_block[free_index] != 0x1 ):
-
             #IF the block is free then:
             if self.memory_block[free_index] & 1 ==  0:
             
-                #Do we have enough memory to store the information
+                #Do we have more memory then we need to store the information
                 if self.memory_block[free_index] & ~ 1 > new_size:
                     if first_fit == True:
                         return self.imp_ff(new_size,free_index)
@@ -140,8 +155,8 @@ class Heap( ):
 
                         free_index += (self.memory_block[free_index] ) // 4
 
+                #Do we have exact amount of memeory
                 elif self.memory_block[free_index] & ~ 1 == new_size:
-                    #if first_fit == True:
                     
                     self.memory_block[free_index] = new_size | 1 #  Header allocated memomry
                     self.memory_block[free_index + ((new_size//4)) -1 ] =  new_size | 1 # Footer allocatd memory
@@ -150,16 +165,6 @@ class Heap( ):
                 
                 #If not then go the next block
                 else:
-                    """ 
-                    #self.memory_block[self.size - 1] = 0x0
-                    last_footer_index = self.size - 2
-                    
-                    self.mysbrk(new_size + 8)
-                    self.memory_block[last_footer_index + 1] += 1
-                    self.memory_block[self.size - 1] = 0x1
-
-                    continue 
-                    """
                     free_index += (self.memory_block[free_index] ) // 4
                     continue
                     
@@ -195,6 +200,52 @@ class Heap( ):
             #Call sbrk
             else:
                 return self.mem_extender(new_size)
+    
+    #Paramerters:
+    #   curr_header         in      index int   ->  is the index of header note
+    #   alloc_size          in      words
+    def exp_loca_assign(self, alloc_size, curr_header):
+        prev_index, next_index = curr_header + 1, curr_header + 2
+        
+        self.memory_block[curr_header] = alloc_size | 1
+        self.memory_block[curr_header + ((alloc_size//4)) - 1] = alloc_size | 1
+
+        
+        #self.memory_block[curr_header + 1] = 0x0
+        #self.memory_block[curr_header + 2] = 0x0
+
+        return curr_header + 1
+    
+
+    def explicit_list(self, new_size):
+        curr_header = self.free_root_head
+        next_index = self.free_next_index
+        
+        while(self.memory_block[next_index] != 0x0 ):
+            #Is the block free???
+            if self.memory_block[curr_header] & 1 ==  0:
+                break
+            
+            #If the block is not free
+            else:
+                curr_header = self.memory_block[next_index]
+                next_index = curr_header + 2
+            
+        
+        new_size += self.practitioner(curr_header,new_size)
+        
+        return self.exp_loca_assign(new_size, curr_header)
+
+            
+
+    def mymalloc(self, size):
+        #header + required size + any possible padding + footer
+        new_size =  ( math.ceil(size/8) * 8 ) + 8
+        if implicit == True:
+            return self.implicit_list(new_size)
+        else:
+            return self.explicit_list(new_size)
+
 
 
     def print_heap(self):
@@ -207,19 +258,23 @@ class Heap( ):
                 print()
 
     def myfree(self, pointer):
-        #coalesce = False #Flag for calase touggle
-
         header_index = pointer - 1 # Move 1 step back to reach header
+        
+        last_footer = -1
+        last_header = -1
+
         
         footer_index = header_index + (self.memory_block[header_index] ) // 4 - 1 #Find the footer index
         #print("For pointer %d the index is %d."%(pointer, footer_index))
 
         #IF the index next to footer is free
         if (self.memory_block[footer_index + 1]) & 1 == 0 :
+            last_footer = footer_index + 1
             footer_index += (self.memory_block[footer_index + 1] ) // 4 
         
         #If the index before header is free
         if (self.memory_block[header_index - 1]) & 1 == 0 :
+            last_header = header_index - 1
             header_index -= (self.memory_block[header_index-1] ) // 4
 
         #Store how much of step we are moving after reaching a new header or footer
@@ -228,6 +283,22 @@ class Heap( ):
         #Update header then footer index
         self.memory_block[header_index] = blocksize & ~ 1 
         self.memory_block[footer_index] = self.memory_block[header_index]
+
+        if implicit == False:
+            if last_footer != -1 and last_header != -1:
+                self.memory_block[header_index + 1] = self.memory_block[last_header]
+                #self.memory_block[
+            
+            else:
+                self.memory_block[self.free_prev_index] = header_index 
+
+                self.memory_block[header_index + 2] = self.free_next_index
+                self.memory_block[header_index + 1] = 0x0
+
+                self.free_root_head = header_index
+                self.free_next_index = header_index + 2
+                self.free_prev_index = header_index + 1
+
 
         return
     
