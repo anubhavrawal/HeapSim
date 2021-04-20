@@ -5,15 +5,13 @@ PERFECT = 1
 ERROR = -1
 MEM_INCREASE = 2
 
-implicit = False
-
-first_fit = True
-
-verbose = True
-
 class Heap( ):
-    def __init__(self):
-        self.size = 40
+    def __init__(self, imp, fit,verb, init_heap_size = 1000):
+        self.implicit = imp
+        self.first_fit = fit
+        self.verbose = verb
+
+        self.size = init_heap_size
         self.sizemax = 100000
         
         self.memory_block = [ 0xDEADBEEF for x in range(self.size ) ]  
@@ -24,7 +22,7 @@ class Heap( ):
         self.memory_block[self.size - 2] = self.memory_block[1]
         self.memory_block[self.size - 1] = 0x1
 
-        if implicit == False:
+        if self.implicit == False:
             self.memory_block[2] = 0x0
             self.memory_block[3] = 0x0
             
@@ -66,10 +64,20 @@ class Heap( ):
             self.memory_block[footer_loc ] = mem_remaining
             
             #IF Explicit free List
-            if implicit == False:
+            if self.implicit == False:
                 #print(new_header + 1)
-                self.memory_block[new_header + 1 ] = 0x0 
-                self.memory_block[new_header + 2 ] = 0x0
+                #moving the pointers to the new block
+                self.memory_block[new_header + 1 ] = self.memory_block[curr_index + 1] 
+                self.memory_block[new_header + 2 ] = self.memory_block[curr_index + 2]
+                
+                #Updating the previous and next pointer origins
+                if self.memory_block[curr_index + 1] != 0x0:
+                    self.memory_block[self.memory_block[curr_index + 1] + 2] = new_header 
+
+                if self.memory_block[curr_index + 2] != 0x0:
+                    self.memory_block[self.memory_block[curr_index + 2] + 1] = new_header 
+
+
                 
                 self.free_root_head = new_header
                 self.free_prev_index = new_header + 1
@@ -137,8 +145,9 @@ class Heap( ):
             
                 #Do we have more memory then we need to store the information
                 if self.memory_block[free_index] & ~ 1 > new_size:
-                    if first_fit == True:
+                    if self.first_fit == True:
                         return self.imp_ff(new_size,free_index)
+                        
                     else:
                         # if self.memory_block[free_index] & ~ 1 < (new_size +16):
                         #     bf_index = free_index
@@ -179,7 +188,7 @@ class Heap( ):
         
         # If we have hit the end of the array and do not have enough space
         # to meet the requested space requirements
-        if first_fit == True:
+        if self.first_fit == True:
             return self.mem_extender(new_size)
         
         #Case for best_fit
@@ -219,19 +228,25 @@ class Heap( ):
 
     def explicit_list(self, new_size):
         curr_header = self.free_root_head
-        next_index = self.free_next_index
+        #next_index = self.free_root_head + 2
+
+        found =  False
         
-        while(self.memory_block[next_index] != 0x0 ):
-            #Is the block free???
-            if self.memory_block[curr_header] & 1 ==  0:
-                break
-            
-            #If the block is not free
+        while( curr_header != 0x0 and not found ):
+            #Do we have more memory then we need to store the information
+            if self.memory_block[curr_header] & ~ 1 > new_size:
+                found = True
+
+            #If we do not have enough space to store the information
             else:
-                curr_header = self.memory_block[next_index]
-                next_index = curr_header + 2
+                curr_header = self.memory_block[curr_header + 2]
+                #next_index = curr_header + 2
             
         
+        if found == False:
+            return self.mem_extender(new_size)
+
+
         new_size += self.practitioner(curr_header,new_size)
         
         return self.exp_loca_assign(new_size, curr_header)
@@ -241,7 +256,7 @@ class Heap( ):
     def mymalloc(self, size):
         #header + required size + any possible padding + footer
         new_size =  ( math.ceil(size/8) * 8 ) + 8
-        if implicit == True:
+        if self.implicit == True:
             return self.implicit_list(new_size)
         else:
             return self.explicit_list(new_size)
@@ -256,6 +271,16 @@ class Heap( ):
                 print("0x{:08X}".format(self.memory_block[x]) )
             else:
                 print()
+    
+    def write_heap(self):
+        with open('output.txt', 'w') as out:
+            for x in range( self.size ):
+                #print( str(x) +", " + hex(self.memory_block[x] ).upper() ) 
+                out.write(str(x)+", ")
+                if self.memory_block[x] != 0xDEADBEEF :
+                    out.write("0x{:08X} \n".format(self.memory_block[x]) )
+                else:
+                    out.write("\n")
 
     def myfree(self, pointer):
         header_index = pointer - 1 # Move 1 step back to reach header
@@ -269,13 +294,46 @@ class Heap( ):
 
         #IF the index next to footer is free
         if (self.memory_block[footer_index + 1]) & 1 == 0 :
-            last_footer = footer_index + 1
-            footer_index += (self.memory_block[footer_index + 1] ) // 4 
-        
+            if self.implicit == False:
+                if self.memory_block[footer_index + 2] != 0x0:
+                    self.memory_block[self.memory_block[footer_index + 2] + 2] = self.memory_block[footer_index + 3] #prev -> next
+                
+                
+                if self.memory_block[footer_index + 3] != 0x0:
+                    self.memory_block[self.memory_block[footer_index + 3] + 1] = self.memory_block[footer_index + 2] #next -> prev
+
+            #last_footer = footer_index + 1
+            footer_index += (self.memory_block[footer_index + 1] ) // 4
+
+            
         #If the index before header is free
         if (self.memory_block[header_index - 1]) & 1 == 0 :
-            last_header = header_index - 1
+            #last_header = header_index - 1
             header_index -= (self.memory_block[header_index-1] ) // 4
+
+            if self.implicit == False:
+                if self.memory_block[header_index + 1] > 0x0:
+                    self.memory_block[self.memory_block[header_index + 2] + 2] = self.memory_block[header_index + 3] #prev -> next
+                
+                
+                if self.memory_block[header_index + 2] > 0x0:
+                    self.memory_block[self.memory_block[header_index + 3] + 1] = self.memory_block[header_index + 2] #next -> prev
+
+        
+        #The always case/ case 1 for explicit list 
+        if self.implicit == False:
+            if self.memory_block[header_index] == (self.size*4) - 2:
+                self.memory_block[self.free_root_head + 1] = header_index
+                
+
+            if self.memory_block[header_index] == (self.size*4) - 2:
+                self.memory_block[header_index + 2] = self.free_root_head
+                
+
+            self.memory_block[header_index + 1] = 0x0
+
+            self.free_root_head = header_index
+            #print(self.free_root_head)
 
         #Store how much of step we are moving after reaching a new header or footer
         blocksize = ((footer_index - header_index) * 4) + 4
@@ -284,20 +342,33 @@ class Heap( ):
         self.memory_block[header_index] = blocksize & ~ 1 
         self.memory_block[footer_index] = self.memory_block[header_index]
 
-        if implicit == False:
-            if last_footer != -1 and last_header != -1:
-                self.memory_block[header_index + 1] = self.memory_block[last_header]
-                #self.memory_block[
-            
-            else:
-                self.memory_block[self.free_prev_index] = header_index 
 
-                self.memory_block[header_index + 2] = self.free_next_index
-                self.memory_block[header_index + 1] = 0x0
 
-                self.free_root_head = header_index
-                self.free_next_index = header_index + 2
-                self.free_prev_index = header_index + 1
+        # if implicit == False:
+        #     if (last_footer != -1 and last_header == -1) or (last_footer == -1 and last_header == -1):
+        #         #Updaing next and prev of the newly made block
+        #         self.memory_block[header_index + 1] = self.memory_block[last_footer + 1]
+        #         self.memory_block[header_index + 2] = self.memory_block[last_footer + 2]
+
+        #         #Updaing the next pointer of last index
+        #         if self.memory_block[last_footer + 1] != 0x0:
+        #             self.memory_block[self.memory_block[last_footer + 1] + 2] = header_index
+                
+
+        #         #Updating the prev pointer of next index
+        #         if self.memory_block[last_footer + 2] != 0x0:
+        #             self.memory_block[self.memory_block[last_footer + 2] + 1] = header_index
+
+
+        #     if last_footer == -1 and last_header == -1:
+        #         self.memory_block[self.free_prev_index] = header_index 
+
+        #         self.memory_block[header_index + 2] = self.free_root_head
+        #         self.memory_block[header_index + 1] = 0x0
+
+        #         self.free_root_head = header_index
+        #         self.free_next_index = header_index + 2
+        #         self.free_prev_index = header_index + 1
 
 
         return
@@ -329,14 +400,71 @@ class Heap( ):
             #old_block_size > requested_block:
             return pointer
             
-
+def usage():
+    print("usage: python3 main.py [-v] --free-list={implicit or explicit} --fit={first or best} <input file>")
 
 def main():
-    memory = Heap()
+    #input flags set to deafult
+    implicit = False
+    fit = False
+    verbose = False
+    filename = ''
+
+    init_size = -1
+
+    #Pasrse the command line args and assign respective values
+    for _e in range(1, len(sys.argv)):
+        try: 
+            if sys.argv[_e][0] == '-':
+                if sys.argv[_e][1] == 'h':
+                    usage()
+                    return
+                
+                elif sys.argv[_e][1] == '-':
+                    cmp_txt = sys.argv[_e].split('=')
+                    
+                    if cmp_txt[0] == '--free-list':
+                        if cmp_txt[1] == 'implicit':
+                            implicit = True
+                        elif cmp_txt[1] == 'explicit':
+                            implicit = False
+                        else:
+                            usage()
+                            return
+                    
+                    elif cmp_txt[0] == '--fit':
+                        if cmp_txt[1] == 'best':
+                            fit = False
+                        elif cmp_txt[1] == 'first':
+                            fit = True
+                        else:
+                            usage()
+                            return
+                elif sys.argv[_e][1] == 'v':
+                    verbose = True
+                
+                elif sys.argv[_e][1] == 'z':
+                    init_size = int( sys.argv[_e +1] )
+                else:
+                    usage()
+                    return
+            else:
+                filename = sys.argv[_e]
+        
+        except:
+            usage()
+            return
+
+    if init_size == -1:
+        memory = Heap(implicit,fit,verbose)
+    
+    else:
+        memory = Heap(implicit,fit,verbose, init_size)
 
     pointer = {}
+    
  
-    with open( sys.argv[1] ) as file:
+    with open( filename ) as file:
         for line in file.readlines():
             if (line[0] == "#"):
                 continue
@@ -364,7 +492,7 @@ def main():
 
                 #print("Pointer:", command[1], "with index:", pointer[ int(command[1]) ])
                 if verbose == True:
-                    print("\n-----------------------------------After Free-----------------------------------------\n")
+                    print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
                     memory.print_heap()
                     print("\n--------------------------------------------------------------------------------------\n")
 
@@ -383,5 +511,6 @@ def main():
     
     if verbose == False:
         memory.print_heap()
-            
+        memory.write_heap()
+          
 main()
