@@ -142,7 +142,6 @@ class Heap( ):
                         return self.imp_ff(new_size,free_index)
                         
                     else:
-
                         if bf_index == -1:
                             bf_index = free_index
 
@@ -216,14 +215,23 @@ class Heap( ):
 
     def explicit_list(self, new_size):
         curr_header = self.free_root_head
-
-        found =  False
+        best_index = -1
         
-        while( curr_header != 0x0 and not found ):
+        while( curr_header != 0x0 and best_index == -1 ):
             #Do we have more memory then we need to store the information
             if self.memory_block[curr_header] & ~ 1 > new_size:
-                found = True
-            
+                if self.first_fit == True:
+                    best_index = curr_header
+                    #found = True
+                else:
+                    if best_index == -1:
+                        best_index = curr_header
+
+                    elif self.memory_block[curr_header] & ~ 1 < self.memory_block[curr_header]:
+                        best_index = curr_header
+                    
+                    curr_header = self.memory_block[curr_header + 2]
+        
             elif self.memory_block[curr_header] & ~ 1 == new_size:
                 return self.exp_loca_assign(new_size, curr_header)
 
@@ -232,13 +240,13 @@ class Heap( ):
                 curr_header = self.memory_block[curr_header + 2]
             
         
-        if found == False:
+        if best_index == -1:
             return self.mem_extender(new_size)
 
 
-        new_size += self.practitioner(curr_header,new_size)
+        new_size += self.practitioner(best_index,new_size)
         
-        return self.exp_loca_assign(new_size, curr_header)
+        return self.exp_loca_assign(new_size, best_index)
 
             
 
