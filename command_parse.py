@@ -2,7 +2,7 @@ import sys
 import getopt
 
 def usage():
-    print("usage: python3 main.py [-h] [-v] --free-list={implicit or explicit} --fit={first or best} <input file>")
+    print("usage: python3 main.py [-d] [-h] [-v] --free-list={implicit or explicit} --fit={first or best} <input file>")
 
 def main():
     first_fit = None
@@ -10,11 +10,12 @@ def main():
     size = -1
     verbose = False
     filename = ''
+    display = False
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'vhz:', ['free-list=', 'fit='])
     except getopt.GetoptError as err:
-        print("Error in start")
+        print("Error!!! ")
         print (err)
         usage()
         return
@@ -52,11 +53,17 @@ def main():
 
             print('fit=', first_fit)
         
+        elif opt in ("-d"):
+            display = True
+        
         elif opt in ('-z'):
             size = arg
-            print(size)
+        
+        else:
+            filename = arg
     
-    filename = sys.argv[-1]
+    print(args)
+    #filename = sys.argv[-1]
     print(filename)
             
 

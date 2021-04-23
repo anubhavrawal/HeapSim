@@ -1,4 +1,5 @@
 import sys
+import os
 import math
 
 PERFECT = 1
@@ -39,6 +40,7 @@ class Heap( ):
 
             return PERFECT
         else:
+            print(sys.argv[0] + ": total heap capacity reached! (100000 words)")
             return ERROR
     
     #Paramerters:
@@ -217,17 +219,18 @@ class Heap( ):
         curr_header = self.free_root_head
         best_index = -1
         
-        while( curr_header != 0x0 and best_index == -1 ):
+        while( curr_header != 0x0):
             #Do we have more memory then we need to store the information
             if self.memory_block[curr_header] & ~ 1 > new_size:
                 if self.first_fit == True:
                     best_index = curr_header
+                    break
                     #found = True
                 else:
                     if best_index == -1:
                         best_index = curr_header
 
-                    elif self.memory_block[curr_header] & ~ 1 < self.memory_block[curr_header]:
+                    elif self.memory_block[curr_header] & ~ 1 < self.memory_block[best_index]:
                         best_index = curr_header
                     
                     curr_header = self.memory_block[curr_header + 2]
@@ -271,8 +274,8 @@ class Heap( ):
             else:
                 print()
     
-    def write_heap(self):
-        with open('output.txt', 'w') as out:
+    def write_heap(self, outname='output.txt'):
+        with open(outname, 'w') as out:
             for x in range( self.size ):
                 out.write(str(x)+", ")
                 if self.memory_block[x] != 0xDEADBEEF :
@@ -389,7 +392,7 @@ class Heap( ):
             return pointer
             
 def usage():
-    print("usage: python3 main.py [-v] --free-list={implicit or explicit} --fit={first or best} <input file>")
+    print("usage: python3 main.py [-h] [-v] [-w] [-z <size>] [-d] --free-list={implicit or explicit} --fit={first or best} <input file>")
 
 def main():
     #input flags set to deafult
@@ -398,6 +401,7 @@ def main():
     verbose = False
     filename = ''
     display = False
+    wrt_verb = False
 
     init_size = -1
 
@@ -431,6 +435,13 @@ def main():
                             return
                 elif sys.argv[_e] == '-v':
                     verbose = True
+                
+                elif sys.argv[_e] == '-w':
+                    
+                    if not os.path.exists('verbose'):
+                        os.makedirs('verbose')
+
+                    wrt_verb = True
                 
                 elif sys.argv[_e] == '-d':
                     display = True
@@ -473,7 +484,7 @@ def main():
     
     
     with open( filename ) as file:
-    
+        command_counter = 1
         for line in file.readlines():
             if (line[0] == "#"):
                 continue
@@ -490,18 +501,26 @@ def main():
                 pointer[ int(command[2]) ] = location
 
                 if verbose == True:
-                    print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
-                    memory.print_heap(verbose)
-                    print("\n--------------------------------------------------------------------------------------\n")
+                    if wrt_verb ==False:
+                        print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
+                        memory.print_heap(verbose)
+                        print("\n--------------------------------------------------------------------------------------\n")
+                    else:
+                        memory.write_heap("verbose/%d. \"%s\".txt "%(command_counter,','.join(command)) )
+
             
 
             elif  command[0] == 'f':
-                memory.myfree( pointer[ int(command[1]) ] )
+                if memory.myfree( pointer[ int(command[1]) ] ) ==ERROR:
+                    return
 
                 if verbose == True:
-                    print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
-                    memory.print_heap(verbose)
-                    print("\n--------------------------------------------------------------------------------------\n")
+                    if wrt_verb ==False:
+                        print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
+                        memory.print_heap(verbose)
+                        print("\n--------------------------------------------------------------------------------------\n")
+                    else:
+                        memory.write_heap("verbose/%d. \"%s\".txt "%(command_counter,','.join(command)) )
 
             elif command[0] == 'r':
                 location = memory.myrealloc( pointer[int(command[2])] , int( command[1] ) ) #old_pointer,size
@@ -512,10 +531,14 @@ def main():
                 pointer[ int(command[3]) ] = location
                 
                 if verbose == True:
-                    print("\n-----------------------------------After Realloc--------------------------------------\n")
-                    memory.print_heap(verbose)
-                    print("\n--------------------------------------------------------------------------------------\n")
-    
+                    if wrt_verb ==False:
+                        print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
+                        memory.print_heap(verbose)
+                        print("\n--------------------------------------------------------------------------------------\n")
+                    else:
+                        memory.write_heap("verbose/%d. \"%s\".txt "%(command_counter,','.join(command)) )
+
+            command_counter+=1
     
     if verbose == False:
         if display == True:

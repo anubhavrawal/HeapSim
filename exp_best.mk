@@ -1,4 +1,4 @@
-all: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13
+all: test1 test2 test3 test4 test5 test6 test7 test8 test10 test11 test12 test13
 
 compile1:
 	python3 main.py --free-list=explicit --fit=best examples/examples/1/in.txt
@@ -47,12 +47,6 @@ compile8:
 
 test8: compile8
 	diff output.txt examples/examples/8/explicit.best.txt
-
-compile9:
-	python3 main.py --free-list=explicit --fit=best examples/examples/9/in.txt
-
-test9:compile9
-	diff output.txt examples/examples/9/explicit.best.txt
 
 compile10:
 	python3 main.py --free-list=explicit --fit=best examples/examples/10/in.txt
