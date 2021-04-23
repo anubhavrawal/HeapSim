@@ -66,7 +66,7 @@ class Heap( ):
             
             #IF Explicit free List
             if self.implicit == False:
-                #print(new_header + 1)
+            
                 #moving the pointers to the new block
                 self.memory_block[new_header + 1 ] = self.memory_block[curr_index + 1] 
                 self.memory_block[new_header + 2 ] = self.memory_block[curr_index + 2]
@@ -85,9 +85,6 @@ class Heap( ):
                 
                 
                 self.free_root_head = new_header
-
-                #self.free_prev_index = new_header + 1
-                #self.free_next_index = new_header + 2
             
             return 0
             #------------------------------------------------------------
@@ -208,10 +205,6 @@ class Heap( ):
         self.memory_block[curr_header] = alloc_size | 1
         self.memory_block[curr_header + ((alloc_size//4)) - 1] = alloc_size | 1
 
-        
-        #self.memory_block[curr_header + 1] = 0x0
-        #self.memory_block[curr_header + 2] = 0x0
-
         return curr_header + 1
     
 
@@ -254,6 +247,7 @@ class Heap( ):
             
 
     def mymalloc(self, size):
+        #Sum of:
         #header + required size + any possible padding + footer
         new_size =  ( math.ceil(size/8) * 8 ) + 8
         if self.implicit == True:
@@ -295,24 +289,16 @@ class Heap( ):
         if (self.memory_block[footer_index + 1]) & 1 == 0 :
             
             if self.implicit == False:
-                #collase_footer = footer_index+1
+                
+                #Move the pointer in such a way that the current block is skipped in the memory
                 if self.memory_block[footer_index + 2] != 0x0:
                     self.memory_block[self.memory_block[footer_index + 2] + 2] = self.memory_block[footer_index + 3] #prev -> next
                 
-                
                 if self.memory_block[footer_index + 3] != 0x0 and footer_index+3 != self.size:
                     self.memory_block[self.memory_block[footer_index + 3] + 1] = self.memory_block[footer_index + 2] #next -> prev
-                    #self.memory_block[footer_index + 3] = self.memory_block[self.memory_block[footer_index + 3] + 2]
-                    #self.free_root_head = self.memory_block[footer_index + 3]+2
                 
                 if footer_index+1 == self.free_root_head or footer_index+2 == self.free_root_head:
                     self.free_root_head = self.memory_block[footer_index + 3]
-
-                #collase_footer = self.memory_block[footer_index + 3]
-                # if self.free_root_head == footer_index+1 and self.memory_block[self.free_root_head+2] != 0x0:
-                #     self.free_root_head = header_index
-
-            #last_footer = footer_index + 1
 
             footer_index += (self.memory_block[footer_index + 1] ) // 4
 
@@ -322,34 +308,23 @@ class Heap( ):
             header_index -= (self.memory_block[header_index-1] ) // 4
 
             if self.implicit == False:
-                # if self.free_root_head == last_header:
-                #     self.free_root_head = self.header_index
-                #print("Prev: ",self.memory_block[header_index+1])
+                #Move the pointer in such a way that the current block is skipped in the memory
                 if self.memory_block[header_index + 1] > 0x0:
                     self.memory_block[self.memory_block[header_index + 1] + 1] = self.memory_block[header_index + 2] #prev -> next
                 
-                #print("Next: ",self.memory_block[header_index+2])
                 if self.memory_block[header_index + 2] > 0x0:
                     self.memory_block[self.memory_block[header_index + 2]+1 ] = self.memory_block[header_index + 1] #next -> prev
                 
                 if header_index == self.free_root_head:
                     self.free_root_head = self.memory_block[header_index + 2]
             
-            #last_header = header_index
-            
         
         #The always case/ case 1 for explicit list 
         if self.implicit == False:
 
-            #self.free_root_head = header_index
-
             #Check if the rood head is not set
             if self.free_root_head != 0x0:
                     self.memory_block[self.free_root_head + 1] = header_index 
-                
-            #Check if the next block is the head itself(caused on double colassing )
-            #and  self.memory_block[self.free_root_head+2] != header_index
-            #if collase_footer ==-1:
             
             self.memory_block[header_index + 2] = self.free_root_head
                 
