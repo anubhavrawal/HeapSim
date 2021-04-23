@@ -8,7 +8,11 @@ Compile command and run:
 
         OR
 
-    `python3 main.py [-v] --free-list={implicit or explicit} --fit={first or best} <input file>``
+    `python3 main.py [-v] [-d] --free-list={implicit or explicit} --fit={first or best} <input file>`
+
+Notes:
+    -v is for verbose mode
+    -d will prevent from creating a `output.txt` file and display on screen
  
 References: 
     Zander Thannhauser
