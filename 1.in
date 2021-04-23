@@ -1,5 +1,0 @@
-a, 5, 0      // ptr0 = myalloc(5)
-f, 0           // myfree(ptr0)
-a, 10, 1     // ptr1 = myalloc(10)
-r, 20, 1, 2      // ptr2 = myrealloc(ptr1,20)
-f, 2         // myfree(ptr2)
