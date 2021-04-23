@@ -17,11 +17,11 @@ python3 hsim.py [-v] [-d] --free-list={implicit or explicit} --fit={first or bes
     --free-list={implicit/explicit}
 
 ### Usable optional flags:
-    -h prints usage
-    -v is for verbose mode
-    -d will prevent from creating a `output.txt` file and display on screen
-    -s <value> will allow to change the size of initial heap 
-    -w writes the verbose commands into a file and stores into the `verbose` folder
+    -h          prints usage
+    -v          is for verbose mode
+    -d          will prevent from creating a `output.txt` file and display on screen
+    -s <value>  will allow to change the size of initial heap 
+    -w          writes the verbose commands into a file and stores into the `verbose` folder
 
 `output.txt` file is creadted on deafult to show the state of the heap.
 > `output.txt` will not be created if there is the error on the code.
