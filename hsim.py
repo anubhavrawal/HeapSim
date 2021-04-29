@@ -71,7 +71,7 @@ def main():
             usage()
             return
     
-    if (fit == None) or (implicit ==None):
+    if (fit is None) or (implicit is None):
         usage()
         return
     
