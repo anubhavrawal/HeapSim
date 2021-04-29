@@ -1,4 +1,5 @@
 import math
+import sys
 
 PERFECT = 1
 ERROR = -1
@@ -21,7 +22,7 @@ class Heap( ):
         self.memory_block[self.size - 2] = self.memory_block[1]
         self.memory_block[self.size - 1] = 0x1
 
-        if self.implicit == False:
+        if not self.implicit:
             self.memory_block[2] = 0x0
             self.memory_block[3] = 0x0
             
@@ -63,7 +64,7 @@ class Heap( ):
             self.memory_block[footer_loc ] = mem_remaining
             
             #IF Explicit free List
-            if self.implicit == False:
+            if not self.implicit:
             
                 #moving the pointers to the new block
                 self.memory_block[new_header + 1 ] = self.memory_block[curr_index + 1] 
@@ -135,7 +136,7 @@ class Heap( ):
             
                 #Do we have more memory then we need to store the information
                 if self.memory_block[free_index] & ~ 1 > new_size:
-                    if self.first_fit == True:
+                    if self.first_fit:
                         return self.imp_ff(new_size,free_index)
                         
                     else:
@@ -172,7 +173,7 @@ class Heap( ):
         
         # If we have hit the end of the array and do not have enough space
         # to meet the requested space requirements
-        if self.first_fit == True:
+        if self.first_fit:
             return self.mem_extender(new_size)
         
         #Case for best_fit
@@ -213,7 +214,7 @@ class Heap( ):
         while( curr_header != 0x0):
             #Do we have more memory then we need to store the information
             if self.memory_block[curr_header] & ~ 1 > new_size:
-                if self.first_fit == True:
+                if self.first_fit:
                     best_index = curr_header
                     break
                     #found = True
@@ -248,15 +249,15 @@ class Heap( ):
         #Sum of:
         #header + required size + any possible padding + footer
         new_size =  ( math.ceil(size/8) * 8 ) + 8
-        if self.implicit == True:
+        if self.implicit:
             return self.implicit_list(new_size)
         else:
             return self.explicit_list(new_size)
 
     def print_heap(self,verb):
         for x in range( self.size ):
-            if verb == True:
-                if self.implicit == False:
+            if verb:
+                if not self.implicit:
                     if x == self.free_root_head:
                         print("**", end="")
 
@@ -286,7 +287,7 @@ class Heap( ):
         #IF the index next to footer is free
         if (self.memory_block[footer_index + 1]) & 1 == 0 :
             
-            if self.implicit == False:
+            if not self.implicit:
                 
                 #Move the pointer in such a way that the current block is skipped in the memory
                 if self.memory_block[footer_index + 2] != 0x0:
@@ -305,7 +306,7 @@ class Heap( ):
         if (self.memory_block[header_index - 1]) & 1 == 0 :
             header_index -= (self.memory_block[header_index-1] ) // 4
 
-            if self.implicit == False:
+            if not self.implicit :
                 #Move the pointer in such a way that the current block is skipped in the memory
                 if self.memory_block[header_index + 1] > 0x0:
                     self.memory_block[self.memory_block[header_index + 1] + 1] = self.memory_block[header_index + 2] #prev -> next
@@ -318,7 +319,7 @@ class Heap( ):
             
         
         #The always case/ case 1 for explicit list 
-        if self.implicit == False:
+        if not self.implicit :
 
             #Check if the rood head is not set
             if self.free_root_head != 0x0:

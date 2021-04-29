@@ -113,8 +113,8 @@ def main():
                     return
                 pointer[ int(command[2]) ] = location
 
-                if verbose == True:
-                    if wrt_verb ==False:
+                if verbose:
+                    if not wrt_verb :
                         print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
                         memory.print_heap(verbose)
                         print("\n--------------------------------------------------------------------------------------\n")
@@ -127,8 +127,8 @@ def main():
                 if memory.myfree( pointer[ int(command[1]) ] ) ==ERROR:
                     return
 
-                if verbose == True:
-                    if wrt_verb ==False:
+                if verbose:
+                    if not wrt_verb :
                         print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
                         memory.print_heap(verbose)
                         print("\n--------------------------------------------------------------------------------------\n")
@@ -143,8 +143,8 @@ def main():
 
                 pointer[ int(command[3]) ] = location
                 
-                if verbose == True:
-                    if wrt_verb ==False:
+                if verbose:
+                    if not wrt_verb :
                         print("\n-----------------------------------%s-----------------------------------\n"% (str(command)))
                         memory.print_heap(verbose)
                         print("\n--------------------------------------------------------------------------------------\n")
@@ -153,8 +153,8 @@ def main():
 
             command_counter+=1
     
-    if verbose == False:
-        if display == True:
+    if not verbose:
+        if display:
             memory.print_heap(verbose)
         else:
             memory.write_heap()
